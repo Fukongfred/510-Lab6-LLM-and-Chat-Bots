@@ -1,16 +1,16 @@
 import os
 import streamlit as st
-import openai
+import google.generativeai as genai  # Assuming you renamed the library for brevity
 from dotenv import load_dotenv
 import io
 from PIL import Image
 import PIL.Image
+import google.ai.generativelanguage as glm
 
 load_dotenv()
 
-# Configure OpenAI GPT-4 API
-openai.api_key = os.getenv("OPENAI_API_KEY")
-model = "gpt-4"  # Using GPT-4 model
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+model = genai.GenerativeModel('gemini-pro-vision')
 extracted_results = []  
 
 def prepare_image(uploaded_file):
@@ -21,7 +21,7 @@ def prepare_image(uploaded_file):
     return img_byte_arr
 
 def process_analysis_text(text):
-    # Implement the logic to process the analysis text and extract top 5 items and similarities
+                # Implement the logic to process the analysis text and extract top 5 items and similarities
     pass
 
 def upload_image():
@@ -35,21 +35,19 @@ def upload_image():
 uploaded_image = upload_image()
 
 if uploaded_image is not None:
-    user_response = st.text_input("What objects do you think the cloud looks like?")
+    user_response = st.text_input("What objects do you think the cloud looks like? ")
     if user_response:  # Check if the user has entered a response
         # When the user provides an answer, show a button to get results
         if st.button('Reveal the Riddle'):
             with st.spinner('Analyzing...'):
                 try:
                     img_byte_arr = prepare_image(uploaded_image)
-                    prompt = f"What top 5 objects does this cloud resemble? Include the corresponding degree of similarity, for example, dog: 60%, bird: 30%."
-                    response = openai.Image.create(
-                        model=model,
-                        images=[img_byte_arr],
-                        prompt=prompt,
-                        n=1
-                    )
-                    analysis_text = response.choices[0].text
+                    content = glm.Content(parts=[
+                        glm.Part(text=f"You are a cloud researcher, you know a lot about the various cloud shapes in the sky and you have imagination. So What top 5 objects does this cloud resemble? and say the corresponding degree of similarity, for example, dog: 60%, bird: 30%."),
+                        glm.Part(inline_data=glm.Blob(mime_type='image/png', data=img_byte_arr)),
+                    ])
+                    response = model.generate_content(content)
+                    analysis_text = response.text
                     st.write(analysis_text)  # Remove this line if you don't want to display the raw API response
                     
                     extracted_results = process_analysis_text(analysis_text)
